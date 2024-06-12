@@ -1,0 +1,196 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <cstring>
+#include <algorithm> // Za sort funkciju
+#include <iomanip> // Za poravnanje tablice
+
+using namespace std;
+
+struct Student {
+    string ime;
+    int godina;
+    double prosjek;
+    string adresa;
+};
+
+void unosStudenta(Student& student) {
+    cout << "Unesite ime studenta: ";
+    cin >> student.ime;
+    cout << "Unesite godinu studija: ";
+    cin >> student.godina;
+
+    do {
+        cout << "Unesite prosjek ocjena (1.0 - 5.0): ";
+        cin >> student.prosjek;
+        if (student.prosjek < 1.0 || student.prosjek > 5.0) {
+            cout << "Neispravan unos. Prosjek mora biti između 1.0 i 5.0." << endl;
+        }
+    } while (student.prosjek < 1.0 || student.prosjek > 5.0);
+
+    cout << "Unesite adresu studenta: ";
+    cin.ignore();
+    getline(cin, student.adresa);
+}
+
+void xorCipher(string& data, char key) {
+    for (size_t i = 0; i < data.size(); ++i) {
+        data[i] ^= key;
+    }
+}
+
+void spremiAdresuBin(const string& adresa, const string& datoteka) {
+    string encryptedAddress = adresa;
+    xorCipher(encryptedAddress, 'K');
+
+    ofstream izlaz(datoteka, ios::binary | ios::app);
+    if (izlaz) {
+        int duljina = encryptedAddress.size();
+        izlaz.write(reinterpret_cast<const char*>(&duljina), sizeof(duljina));
+        izlaz.write(encryptedAddress.c_str(), duljina);
+    } else {
+        cerr << "Greška prilikom otvaranja datoteke za spremanje." << endl;
+    }
+}
+
+void ispisiStudenteTxt(Student studenti[], int brojStudenata) {
+    cout << left << setw(20) << "Ime" << setw(10) << "Godina" << setw(10) << "Prosjek" << endl;
+    cout << "----------------------------------------------" << endl;
+
+    for (int i = 0; i < brojStudenata; ++i) {
+        cout << left << setw(20) << studenti[i].ime << setw(10) << studenti[i].godina << setw(10) << studenti[i].prosjek << endl;
+    }
+}
+
+void sortirajStudente(Student studenti[], int brojStudenata) {
+    sort(studenti, studenti + brojStudenata, [](const Student& a, const Student& b) {
+        if (a.godina != b.godina)
+            return a.godina > b.godina;
+        return a.prosjek > b.prosjek;
+    });
+}
+
+void azurirajStudenta(Student studenti[], int brojStudenata) {
+    string ime;
+    cout << "Unesite ime studenta kojeg želite ažurirati: ";
+    cin >> ime;
+
+    bool found = false;
+    for (int i = 0; i < brojStudenata; ++i) {
+        if (studenti[i].ime == ime) {
+            cout << "Student pronađen. Unesite nove podatke." << endl;
+            unosStudenta(studenti[i]);
+
+            ofstream izlazTxt("studenti.txt");
+            for (int j = 0; j < brojStudenata; ++j) {
+                izlazTxt << studenti[j].ime << " " << studenti[j].godina << " " << studenti[j].prosjek << endl;
+            }
+            izlazTxt.close();
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) {
+        cout << "Student nije pronađen." << endl;
+    }
+}
+
+void brisiStudenta(Student studenti[], int& brojStudenata) {
+    string ime;
+    cout << "Unesite ime studenta kojeg želite obrisati: ";
+    cin >> ime;
+
+    bool found = false;
+    for (int i = 0; i < brojStudenata; ++i) {
+        if (studenti[i].ime == ime) {
+            for (int j = i; j < brojStudenata - 1; ++j) {
+                studenti[j] = studenti[j + 1];
+            }
+            brojStudenata--;
+
+            ofstream izlazTxt("studenti.txt");
+            for (int j = 0; j < brojStudenata; ++j) {
+                izlazTxt << studenti[j].ime << " " << studenti[j].godina << " " << studenti[j].prosjek << endl;
+            }
+            izlazTxt.close();
+            found = true;
+            cout << "Student je obrisan." << endl;
+            break;
+        }
+    }
+
+    if (!found) {
+        cout << "Student nije pronađen." << endl;
+    }
+}
+
+int main() {
+    const int maxStudenata = 100;
+    Student studenti[maxStudenata];
+    int brojStudenata = 0;
+
+    int izbor;
+
+    do {
+        cout << "\033[1;32m";
+        cout << "---------------------------------------------" << endl;
+        cout << " IZBORNIK" << endl;
+        cout << "---------------------------------------------" << endl;
+        cout << " 1. Upis studenta" << endl;
+        cout << " 2. Ispis studenata" << endl;
+        cout << " 3. Ažuriranje studenta" << endl;
+        cout << " 4. Brisanje studenta" << endl;
+        cout << " 5. Izlaz" << endl;
+        cout << "---------------------------------------------" << endl;
+        cout << "\033[0m";
+
+        cout << "Unesite izbor: ";
+        cin >> izbor;
+
+        switch (izbor) {
+            case 1:
+                if (brojStudenata < maxStudenata) {
+                    unosStudenta(studenti[brojStudenata]);
+
+                    // Spremi adresu u šifriranu binarnu datoteku
+                    spremiAdresuBin(studenti[brojStudenata].adresa, "adresa.bin");
+
+                    // Spremi studenta u tekstualnu datoteku
+                    ofstream izlazTxt("studenti.txt", ios::app);
+                    if (izlazTxt) {
+                        izlazTxt << studenti[brojStudenata].ime << " " << studenti[brojStudenata].godina << " " << studenti[brojStudenata].prosjek << endl;
+                        izlazTxt.close();
+                        cout << "Student je uspješno spremljen." << endl;
+                        brojStudenata++;
+                    } else {
+                        cerr << "Greška prilikom otvaranja datoteke za spremanje." << endl;
+                    }
+                } else {
+                    cout << "Dosegnut maksimalan broj studenata." << endl;
+                }
+                break;
+            case 2:
+                cout << "\033[1;34m";
+                sortirajStudente(studenti, brojStudenata);
+                cout << "Podaci o studentima:" << endl;
+                ispisiStudenteTxt(studenti, brojStudenata);
+                cout << "\033[0m";
+                break;
+            case 3:
+                azurirajStudenta(studenti, brojStudenata);
+                break;
+            case 4:
+                brisiStudenta(studenti, brojStudenata);
+                break;
+            case 5:
+                cout << "Izlaz iz programa." << endl;
+                break;
+            default:
+                cout << "Neispravan izbor. Pokušajte ponovno." << endl;
+                break;
+        }
+    } while (izbor != 5);
+
+    return 0;
+}
